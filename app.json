@@ -1,0 +1,55 @@
+{
+  "expo": {
+    "name": "IdeaVault",
+    "slug": "idea-vault",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "scheme": "ideavault",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0A0E1A"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ideavault.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0A0E1A",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "package": "com.ideavault.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#D4A843"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow IdeaVault to access your photos to attach images to ideas."
+        }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Allow IdeaVault to access your microphone for voice input."
+        }
+      ]
+    ]
+  }
+}
