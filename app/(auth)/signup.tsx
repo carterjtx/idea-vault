@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { supabase } from '../../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { Colors, Shadows } from '../../constants/theme';
 
 export default function SignupScreen() {
@@ -36,6 +36,11 @@ export default function SignupScreen() {
 
     if (password.length < 6) {
       Alert.alert('Weak Password', 'Password must be at least 6 characters.');
+      return;
+    }
+
+    if (!isSupabaseConfigured) {
+      Alert.alert('Not Configured', 'Supabase is not configured. Add your Supabase credentials to .env.');
       return;
     }
 

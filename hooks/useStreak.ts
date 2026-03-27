@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { Streak } from '../lib/types';
 
 const LOCAL_STREAK_KEY = 'ideavault_streak';
@@ -19,16 +19,22 @@ export function useStreak() {
 
   const loadStreak = useCallback(async () => {
     try {
+      if (!isSupabaseConfigured) {
+        const stored = await AsyncStorage.getItem(LOCAL_STREAK_KEY);
+        if (stored) setStreak(JSON.parse(stored));
+        return;
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
 
       if (session) {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('streaks')
           .select('*')
           .eq('user_id', session.user.id)
-          .single();
+          .maybeSingle();
 
-        if (data) {
+        if (data && !error) {
           setStreak(data);
           await AsyncStorage.setItem(LOCAL_STREAK_KEY, JSON.stringify(data));
           return;
@@ -79,12 +85,14 @@ export function useStreak() {
     await AsyncStorage.setItem(LOCAL_STREAK_KEY, JSON.stringify(updated));
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        updated.user_id = session.user.id;
-        await supabase
-          .from('streaks')
-          .upsert(updated, { onConflict: 'user_id' });
+      if (isSupabaseConfigured) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          updated.user_id = session.user.id;
+          await supabase
+            .from('streaks')
+            .upsert(updated, { onConflict: 'user_id' });
+        }
       }
     } catch {
       // Saved locally, will sync later

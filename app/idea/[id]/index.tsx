@@ -13,13 +13,13 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useIdeas } from '../../hooks/useIdeas';
-import { useAI } from '../../hooks/useAI';
-import { Colors, Shadows } from '../../constants/theme';
-import { Idea, IdeaVersion } from '../../lib/types';
-import ScoreCard from '../../components/ScoreCard';
-import StatusBadge from '../../components/StatusBadge';
-import MomentumMeter from '../../components/MomentumMeter';
+import { useIdeas } from '../../../hooks/useIdeas';
+import { useAI } from '../../../hooks/useAI';
+import { Colors, Shadows } from '../../../constants/theme';
+import { Idea, IdeaVersion } from '../../../lib/types';
+import ScoreCard from '../../../components/ScoreCard';
+import StatusBadge from '../../../components/StatusBadge';
+import MomentumMeter from '../../../components/MomentumMeter';
 
 export default function IdeaDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();

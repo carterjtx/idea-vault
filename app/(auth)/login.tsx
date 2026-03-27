@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { supabase } from '../../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { Colors, Shadows } from '../../constants/theme';
 
 export default function LoginScreen() {
@@ -26,6 +26,11 @@ export default function LoginScreen() {
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
       Alert.alert('Missing Fields', 'Please enter your email and password.');
+      return;
+    }
+
+    if (!isSupabaseConfigured) {
+      Alert.alert('Not Configured', 'Supabase is not configured. Use Guest Mode or add your Supabase credentials to .env.');
       return;
     }
 

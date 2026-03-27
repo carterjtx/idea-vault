@@ -1,8 +1,10 @@
 import { AIScore, AIPlan, IdeaLink, WeeklyNudge } from './types';
 
-const CLAUDE_API_KEY = process.env.EXPO_PUBLIC_CLAUDE_API_KEY || '';
+const CLAUDE_API_KEY = process.env.EXPO_PUBLIC_CLAUDE_API_KEY ?? '';
 const CLAUDE_MODEL = 'claude-sonnet-4-20250514';
 const API_URL = 'https://api.anthropic.com/v1/messages';
+
+export const isClaudeConfigured = CLAUDE_API_KEY.length > 0;
 
 interface ClaudeMessage {
   role: 'user' | 'assistant';
@@ -10,6 +12,10 @@ interface ClaudeMessage {
 }
 
 async function callClaude(system: string, messages: ClaudeMessage[]): Promise<string> {
+  if (!isClaudeConfigured) {
+    throw new Error('Claude API key not configured. Add EXPO_PUBLIC_CLAUDE_API_KEY to your .env file.');
+  }
+
   const response = await fetch(API_URL, {
     method: 'POST',
     headers: {

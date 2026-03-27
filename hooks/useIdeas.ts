@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { Idea, IdeaStatus, IdeaCategory, IdeaVersion } from '../lib/types';
 import * as Crypto from 'expo-crypto';
 
@@ -38,6 +38,19 @@ export function useIdeas() {
   const fetchIdeas = useCallback(async () => {
     setLoading(true);
     try {
+      // Skip Supabase entirely if not configured — go straight to local
+      if (!isSupabaseConfigured) {
+        setIsGuest(true);
+        const localIdeas = await loadLocalIdeas();
+        const decayed = localIdeas.map(idea => ({
+          ...idea,
+          momentum_score: calculateMomentumDecay(idea),
+        }));
+        setIdeas(decayed);
+        setLoading(false);
+        return;
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
 
       if (!session) {
