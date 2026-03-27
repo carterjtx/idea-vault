@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useIdeas } from '../../../hooks/useIdeas';
@@ -20,14 +21,16 @@ export default function PlanningScreen() {
   const { ideas, updateIdea } = useIdeas();
   const { plan, planning, error } = useAI();
   const [hasGenerated, setHasGenerated] = useState(false);
+  const autoGenerateRef = useRef(false);
 
   const idea = ideas.find((i) => i.id === id);
 
   useEffect(() => {
-    if (idea && !idea.ai_plan && !hasGenerated) {
+    if (idea && !idea.ai_plan && !hasGenerated && !autoGenerateRef.current) {
+      autoGenerateRef.current = true;
       generatePlan();
     }
-  }, [idea?.id]);
+  }, [idea, hasGenerated]);
 
   const generatePlan = async () => {
     if (!idea) return;
@@ -51,7 +54,7 @@ export default function PlanningScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backButton}>
@@ -108,7 +111,7 @@ export default function PlanningScreen() {
           </Pressable>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -128,7 +131,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 60,
     paddingBottom: 12,
   },
   backButton: {

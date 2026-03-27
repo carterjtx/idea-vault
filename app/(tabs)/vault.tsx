@@ -8,13 +8,14 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import { useIdeas } from '../../hooks/useIdeas';
 import { useStreak } from '../../hooks/useStreak';
 import { useAI } from '../../hooks/useAI';
 import { Colors, Shadows } from '../../constants/theme';
-import { Idea, IdeaCategory, DAILY_CHALLENGES } from '../../lib/types';
+import { IdeaCategory, DAILY_CHALLENGES } from '../../lib/types';
 import IdeaCard from '../../components/IdeaCard';
 import QuickCaptureModal from '../../components/QuickCaptureModal';
 
@@ -29,7 +30,7 @@ function getDailyChallenge(): string {
 }
 
 export default function VaultScreen() {
-  const { activeIdeas, archivedIdeas, loading, fetchIdeas, addIdea, restoreIdea } = useIdeas();
+  const { activeIdeas, archivedIdeas, loading, fetchIdeas, addIdea, restoreIdea, updateIdea } = useIdeas();
   const { streak, logActivity, hasLoggedToday } = useStreak();
   const { suggestTag } = useAI();
 
@@ -44,16 +45,16 @@ export default function VaultScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchIdeas();
-    }, [])
+    }, [fetchIdeas])
   );
 
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchIdeas();
     setRefreshing(false);
-  };
+  }, [fetchIdeas]);
 
-  const handleAddIdea = async (
+  const handleAddIdea = useCallback(async (
     title: string,
     description: string | null,
     category: IdeaCategory | null,
@@ -65,31 +66,30 @@ export default function VaultScreen() {
     // Auto-tag if no category selected
     if (!category && idea) {
       const suggested = await suggestTag(title, description || '');
-      if (suggested) {
-        // We don't await updateIdea here — fire and forget for UX speed
+      if (suggested && suggested !== idea.category) {
+        await updateIdea(idea.id, { category: suggested as IdeaCategory });
       }
     }
-  };
+  }, [addIdea, logActivity, suggestTag, updateIdea]);
 
   const displayedIdeas = useMemo(() => {
     let list = viewMode === 'vault' ? activeIdeas : archivedIdeas;
 
-    // Filter
     if (filterCategory) {
       list = list.filter((i) => i.category === filterCategory);
     }
 
-    // Sort
     switch (sortMode) {
       case 'score':
         return [...list].sort(
           (a, b) => (b.ai_score?.overall_score || 0) - (a.ai_score?.overall_score || 0)
         );
-      case 'status':
+      case 'status': {
         const statusOrder = ['Launched', 'In Planning', 'Analyzed', 'Raw'];
         return [...list].sort(
           (a, b) => statusOrder.indexOf(a.status) - statusOrder.indexOf(b.status)
         );
+      }
       case 'date':
       default:
         return [...list].sort(
@@ -104,7 +104,7 @@ export default function VaultScreen() {
   }, [activeIdeas]);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
         <View>
@@ -279,7 +279,7 @@ export default function VaultScreen() {
         onClose={() => setShowCapture(false)}
         onSubmit={handleAddIdea}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -293,7 +293,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
     paddingBottom: 16,
   },
   headerTitle: {

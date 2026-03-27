@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { Streak } from '../lib/types';
+import { isDemoMode } from '../lib/demoMode';
+import { DEMO_STREAK } from '../lib/demoData';
 
 const LOCAL_STREAK_KEY = 'ideavault_streak';
 
@@ -19,6 +21,11 @@ export function useStreak() {
 
   const loadStreak = useCallback(async () => {
     try {
+      if (isDemoMode()) {
+        setStreak(DEMO_STREAK);
+        return;
+      }
+
       if (!isSupabaseConfigured) {
         const stored = await AsyncStorage.getItem(LOCAL_STREAK_KEY);
         if (stored) setStreak(JSON.parse(stored));

@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { Colors } from '../constants/theme';
 
 interface MomentumMeterProps {
   score: number; // 0-10
@@ -13,9 +14,24 @@ export default function MomentumMeter({ score }: MomentumMeterProps) {
   if (score <= 0) return null;
 
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-      <Text style={{ fontSize: 10 }}>{fireEmojis}</Text>
-      <Text style={{ fontSize: 10, color: '#5A5F78' }}>{emptyDots}</Text>
+    <View style={styles.container}>
+      <Text style={styles.fire}>{fireEmojis}</Text>
+      <Text style={styles.dots}>{emptyDots}</Text>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  fire: {
+    fontSize: 10,
+  },
+  dots: {
+    fontSize: 10,
+    color: Colors.textMuted,
+  },
+});

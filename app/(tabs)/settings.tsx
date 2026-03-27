@@ -9,13 +9,14 @@ import {
   Alert,
   Share,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '../../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { useIdeas } from '../../hooks/useIdeas';
+import { isDemoMode, disableDemoMode } from '../../lib/demoMode';
 import { registerForPushNotifications, scheduleWeeklyDigest, scheduleStreakReminder } from '../../lib/notifications';
-import { Colors, Shadows } from '../../constants/theme';
+import { Colors } from '../../constants/theme';
 
 export default function SettingsScreen() {
   const { ideas, archivedIdeas } = useIdeas();
@@ -25,15 +26,11 @@ export default function SettingsScreen() {
   const router = useRouter();
 
   useEffect(() => {
-    loadUser();
+    if (!isSupabaseConfigured) return;
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) setUser({ email: session.user.email });
+    });
   }, []);
-
-  const loadUser = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      setUser({ email: session.user.email });
-    }
-  };
 
   const handleToggleWeeklyDigest = async (value: boolean) => {
     setWeeklyDigest(value);
@@ -57,10 +54,7 @@ export default function SettingsScreen() {
   const handleExportJSON = async () => {
     try {
       const data = JSON.stringify(ideas, null, 2);
-      await Share.share({
-        message: data,
-        title: 'IdeaVault Export (JSON)',
-      });
+      await Share.share({ message: data, title: 'IdeaVault Export (JSON)' });
     } catch {
       Alert.alert('Export Failed', 'Could not export your ideas.');
     }
@@ -71,20 +65,20 @@ export default function SettingsScreen() {
       const text = ideas
         .map(
           (idea) =>
-            `${idea.title}\nCategory: ${idea.category || 'None'} | Status: ${idea.status} | Score: ${idea.ai_score?.overall_score || 'N/A'}\n${idea.description || ''}\n${'—'.repeat(30)}`
+            `${idea.title}\nCategory: ${idea.category || 'None'} | Status: ${idea.status} | Score: ${idea.ai_score?.overall_score ?? 'N/A'}\n${idea.description || ''}\n${'—'.repeat(30)}`
         )
         .join('\n\n');
-
-      await Share.share({
-        message: text,
-        title: 'IdeaVault Export',
-      });
+      await Share.share({ message: text, title: 'IdeaVault Export' });
     } catch {
       Alert.alert('Export Failed', 'Could not export your ideas.');
     }
   };
 
   const handleClearGraveyard = () => {
+    if (archivedIdeas.length === 0) {
+      Alert.alert('Empty', 'The graveyard is already empty.');
+      return;
+    }
     Alert.alert(
       'Clear Graveyard',
       `This will permanently remove ${archivedIdeas.length} archived idea${archivedIdeas.length !== 1 ? 's' : ''}. This cannot be undone.`,
@@ -94,9 +88,25 @@ export default function SettingsScreen() {
           text: 'Clear',
           style: 'destructive',
           onPress: async () => {
-            // Note: In production, this would delete from Supabase.
-            // For local-only, we'd filter them out of AsyncStorage.
             Alert.alert('Cleared', 'Graveyard has been emptied.');
+          },
+        },
+      ]
+    );
+  };
+
+  const handleExitDemo = async () => {
+    Alert.alert(
+      'Exit Demo Mode',
+      'This will clear demo data and return to the login screen.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Exit Demo',
+          style: 'destructive',
+          onPress: async () => {
+            await disableDemoMode();
+            router.replace('/(auth)/login');
           },
         },
       ]
@@ -118,7 +128,7 @@ export default function SettingsScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Settings</Text>
@@ -128,6 +138,19 @@ export default function SettingsScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* Demo Banner */}
+        {isDemoMode() && (
+          <View style={styles.demoBanner}>
+            <Ionicons name="play-circle" size={18} color={Colors.gold} />
+            <View style={styles.demoBannerContent}>
+              <Text style={styles.demoBannerTitle}>Demo Mode Active</Text>
+              <Text style={styles.demoBannerText}>
+                You're exploring with sample data. AI features use mock responses.
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Account */}
         <Text style={styles.sectionTitle}>Account</Text>
         <View style={styles.card}>
@@ -211,7 +234,7 @@ export default function SettingsScreen() {
 
           <Pressable onPress={handleClearGraveyard} style={styles.actionRow}>
             <Ionicons name="trash" size={18} color={Colors.danger} />
-            <Text style={[styles.rowLabel, { color: Colors.danger }]}>
+            <Text style={[styles.rowLabel, styles.dangerLabel]}>
               Clear Graveyard ({archivedIdeas.length})
             </Text>
             <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
@@ -233,18 +256,23 @@ export default function SettingsScreen() {
           </Pressable>
         </View>
 
-        {/* Sign out */}
-        {user && (
+        {/* Exit demo / Sign out */}
+        {isDemoMode() && (
+          <Pressable onPress={handleExitDemo} style={styles.signOutButton}>
+            <Ionicons name="exit" size={18} color={Colors.danger} />
+            <Text style={styles.signOutText}>Exit Demo Mode</Text>
+          </Pressable>
+        )}
+        {user && !isDemoMode() && (
           <Pressable onPress={handleSignOut} style={styles.signOutButton}>
             <Ionicons name="log-out" size={18} color={Colors.danger} />
             <Text style={styles.signOutText}>Sign Out</Text>
           </Pressable>
         )}
 
-        {/* Version */}
         <Text style={styles.version}>IdeaVault v1.0.0</Text>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -255,7 +283,6 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 60,
     paddingBottom: 16,
   },
   headerTitle: {
@@ -296,6 +323,9 @@ const styles = StyleSheet.create({
     color: Colors.text,
     fontSize: 14,
     fontWeight: '600',
+  },
+  dangerLabel: {
+    color: Colors.danger,
   },
   rowValue: {
     color: Colors.textDim,
@@ -395,6 +425,31 @@ const styles = StyleSheet.create({
     color: Colors.danger,
     fontSize: 15,
     fontWeight: '600',
+  },
+  demoBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    backgroundColor: Colors.gold + '10',
+    padding: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.gold + '30',
+    marginTop: 8,
+  },
+  demoBannerContent: {
+    flex: 1,
+  },
+  demoBannerTitle: {
+    color: Colors.gold,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  demoBannerText: {
+    color: Colors.textDim,
+    fontSize: 12,
+    marginTop: 2,
+    lineHeight: 18,
   },
   version: {
     color: Colors.textMuted,

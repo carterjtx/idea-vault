@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   Image,
   Animated,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useIdeas } from '../../../hooks/useIdeas';
@@ -29,28 +30,32 @@ export default function IdeaDetailScreen() {
   const [devilMode, setDevilMode] = useState(false);
   const [showVersions, setShowVersions] = useState(false);
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const hasBoosted = useRef(false);
 
   const idea = ideas.find((i) => i.id === id);
 
   useEffect(() => {
-    // Boost momentum on view
-    if (idea) {
+    // Boost momentum on view (once per screen visit)
+    if (idea && !hasBoosted.current) {
+      hasBoosted.current = true;
       updateIdea(idea.id, {});
     }
-  }, [id]);
+  }, [idea, updateIdea]);
 
   // Pulse animation for analyze button
   useEffect(() => {
     if (!idea?.ai_score) {
-      Animated.loop(
+      const animation = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, { toValue: 1.05, duration: 1200, useNativeDriver: true }),
           Animated.timing(pulseAnim, { toValue: 1, duration: 1200, useNativeDriver: true }),
         ])
-      ).start();
+      );
+      animation.start();
+      return () => animation.stop();
     }
     return () => pulseAnim.stopAnimation();
-  }, [idea?.ai_score]);
+  }, [idea?.ai_score, pulseAnim]);
 
   if (!idea) {
     return (
@@ -100,7 +105,7 @@ export default function IdeaDetailScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backButton}>
@@ -285,7 +290,7 @@ export default function IdeaDetailScreen() {
           </View>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -310,7 +315,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
     paddingBottom: 12,
   },
   backButton: {

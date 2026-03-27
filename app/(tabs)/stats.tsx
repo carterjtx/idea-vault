@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useIdeas } from '../../hooks/useIdeas';
 import { useStreak } from '../../hooks/useStreak';
-import { getWeeklyNudge } from '../../lib/claude';
+import { getWeeklyNudge, isClaudeConfigured } from '../../lib/claude';
+import { isDemoMode } from '../../lib/demoMode';
+import { MOCK_WEEKLY_NUDGE } from '../../lib/demoData';
 import { Colors, Shadows } from '../../constants/theme';
-import { IdeaCategory, WeeklyNudge } from '../../lib/types';
+import { isSmallScreen, isLargeScreen, fp } from '../../constants/responsive';
+import { WeeklyNudge } from '../../lib/types';
 
 function StatCard({
   icon,
@@ -63,7 +67,6 @@ export default function StatsScreen() {
   ).length;
   const launchedCount = ideas.filter((i) => i.status === 'Launched').length;
 
-  // Category breakdown
   const categoryBreakdown = useMemo(() => {
     const counts: Record<string, number> = {};
     ideas.forEach((idea) => {
@@ -77,39 +80,43 @@ export default function StatsScreen() {
 
   const maxCategoryCount = categoryBreakdown.length > 0 ? categoryBreakdown[0].count : 0;
 
-  // Load weekly nudge
+  // Load weekly nudge once ideas are available
   useEffect(() => {
-    loadNudge();
-  }, []);
+    if (activeIdeas.length === 0) return;
 
-  const loadNudge = async () => {
-    try {
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-      const oldUnactioned = activeIdeas.filter(
-        (i) =>
-          (i.status === 'Raw' || i.status === 'Analyzed') &&
-          new Date(i.created_at) < sevenDaysAgo
-      );
-
-      if (oldUnactioned.length > 0) {
-        const result = await getWeeklyNudge(
-          oldUnactioned.map((i) => ({
-            id: i.id,
-            title: i.title,
-            description: i.description,
-          }))
-        );
-        setNudge(result);
-      }
-    } catch {
-      // Silently fail — nudge is non-critical
+    // Demo mode: use mock nudge
+    if (isDemoMode()) {
+      setNudge(MOCK_WEEKLY_NUDGE);
+      return;
     }
-  };
+
+    if (!isClaudeConfigured) return;
+
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const oldUnactioned = activeIdeas.filter(
+      (i) =>
+        (i.status === 'Raw' || i.status === 'Analyzed') &&
+        new Date(i.created_at) < sevenDaysAgo
+    );
+
+    if (oldUnactioned.length === 0) return;
+
+    let cancelled = false;
+    getWeeklyNudge(
+      oldUnactioned.map((i) => ({ id: i.id, title: i.title, description: i.description }))
+    ).then((result) => {
+      if (!cancelled) setNudge(result);
+    }).catch(() => {
+      // Non-critical — silently ignore
+    });
+
+    return () => { cancelled = true; };
+  }, [activeIdeas]);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Stats</Text>
@@ -152,24 +159,9 @@ export default function StatsScreen() {
         {/* Stat cards grid */}
         <View style={styles.statGrid}>
           <StatCard icon="bulb" iconColor={Colors.gold} label="Total Ideas" value={totalIdeas} />
-          <StatCard
-            icon="sparkles"
-            iconColor={Colors.accent}
-            label="Analyzed"
-            value={analyzedCount}
-          />
-          <StatCard
-            icon="map"
-            iconColor={Colors.amber}
-            label="In Planning"
-            value={planningCount}
-          />
-          <StatCard
-            icon="rocket"
-            iconColor={Colors.success}
-            label="Launched"
-            value={launchedCount}
-          />
+          <StatCard icon="sparkles" iconColor={Colors.accent} label="Analyzed" value={analyzedCount} />
+          <StatCard icon="map" iconColor={Colors.amber} label="In Planning" value={planningCount} />
+          <StatCard icon="rocket" iconColor={Colors.success} label="Launched" value={launchedCount} />
         </View>
 
         {/* Idea of the Week */}
@@ -181,7 +173,7 @@ export default function StatsScreen() {
             </View>
             <Text style={styles.nudgeMessage}>{nudge.nudge_message}</Text>
             <Pressable
-              onPress={() => router.push(`/idea/${nudge.idea_id}`)}
+              onPress={() => router.push(`/idea/${nudge.idea_id}` as any)}
               style={styles.nudgeButton}
             >
               <Text style={styles.nudgeButtonText}>View Idea</Text>
@@ -205,7 +197,7 @@ export default function StatsScreen() {
           </View>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -216,7 +208,6 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 60,
     paddingBottom: 16,
   },
   headerTitle: {
@@ -291,17 +282,17 @@ const styles = StyleSheet.create({
   statCard: {
     backgroundColor: Colors.card,
     borderRadius: 14,
-    padding: 16,
+    padding: isSmallScreen ? 12 : 16,
     borderWidth: 1,
     borderColor: Colors.border,
-    width: '48%',
+    width: isLargeScreen ? '23%' : '48%',
     flexGrow: 1,
     gap: 8,
     ...Shadows.card,
   },
   statValue: {
     color: Colors.text,
-    fontSize: 28,
+    fontSize: fp(28),
     fontWeight: '800',
     letterSpacing: -0.5,
   },

@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Idea } from '../lib/types';
 import { Colors, Shadows } from '../constants/theme';
+import { isSmallScreen, fp } from '../constants/responsive';
 import StatusBadge from './StatusBadge';
 import MomentumMeter from './MomentumMeter';
 
@@ -78,7 +79,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.card,
     borderRadius: 16,
-    padding: 16,
+    padding: isSmallScreen ? 12 : 16,
     marginBottom: 12,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -112,7 +113,7 @@ const styles = StyleSheet.create({
   },
   title: {
     color: Colors.text,
-    fontSize: 17,
+    fontSize: fp(17),
     fontWeight: '700',
     marginBottom: 6,
     letterSpacing: 0.2,

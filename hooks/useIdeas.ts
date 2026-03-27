@@ -2,9 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { Idea, IdeaStatus, IdeaCategory, IdeaVersion } from '../lib/types';
+import { isDemoMode } from '../lib/demoMode';
+import { DEMO_IDEAS } from '../lib/demoData';
 import * as Crypto from 'expo-crypto';
 
 const LOCAL_IDEAS_KEY = 'ideavault_ideas';
+const DEMO_IDEAS_KEY = 'ideavault_demo_ideas';
 
 // Momentum decay: lose 0.5 points per day of inactivity
 const MOMENTUM_DECAY_RATE = 0.5;
@@ -38,6 +41,25 @@ export function useIdeas() {
   const fetchIdeas = useCallback(async () => {
     setLoading(true);
     try {
+      // Demo mode: load demo ideas (persisted so edits stick during session)
+      if (isDemoMode()) {
+        setIsGuest(true);
+        try {
+          const stored = await AsyncStorage.getItem(DEMO_IDEAS_KEY);
+          if (stored) {
+            const parsed = JSON.parse(stored) as Idea[];
+            setIdeas(parsed.map(idea => ({ ...idea, momentum_score: calculateMomentumDecay(idea) })));
+          } else {
+            setIdeas(DEMO_IDEAS);
+            await AsyncStorage.setItem(DEMO_IDEAS_KEY, JSON.stringify(DEMO_IDEAS));
+          }
+        } catch {
+          setIdeas(DEMO_IDEAS);
+        }
+        setLoading(false);
+        return;
+      }
+
       // Skip Supabase entirely if not configured — go straight to local
       if (!isSupabaseConfigured) {
         setIsGuest(true);
@@ -124,7 +146,7 @@ export function useIdeas() {
       updated_at: now,
     };
 
-    if (!isGuest) {
+    if (!isGuest && !isDemoMode()) {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         newIdea.user_id = session.user.id;
@@ -135,7 +157,11 @@ export function useIdeas() {
 
     const updated = [newIdea, ...ideas];
     setIdeas(updated);
-    await saveLocalIdeas(updated);
+    if (isDemoMode()) {
+      await AsyncStorage.setItem(DEMO_IDEAS_KEY, JSON.stringify(updated));
+    } else {
+      await saveLocalIdeas(updated);
+    }
     return newIdea;
   }, [ideas, isGuest, saveLocalIdeas]);
 
@@ -172,7 +198,7 @@ export function useIdeas() {
       updated_at: new Date().toISOString(),
     };
 
-    if (!isGuest) {
+    if (!isGuest && !isDemoMode()) {
       const { error } = await supabase
         .from('ideas')
         .update(updatedIdea)
@@ -182,7 +208,11 @@ export function useIdeas() {
 
     const updated = ideas.map(i => (i.id === id ? updatedIdea : i));
     setIdeas(updated);
-    await saveLocalIdeas(updated);
+    if (isDemoMode()) {
+      await AsyncStorage.setItem(DEMO_IDEAS_KEY, JSON.stringify(updated));
+    } else {
+      await saveLocalIdeas(updated);
+    }
   }, [ideas, isGuest, saveLocalIdeas]);
 
   const archiveIdea = useCallback(async (id: string) => {

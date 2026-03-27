@@ -14,6 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
+import { enableDemoMode } from '../../lib/demoMode';
 import { Colors, Shadows } from '../../constants/theme';
 
 export default function LoginScreen() {
@@ -54,6 +55,11 @@ export default function LoginScreen() {
   };
 
   const handleGuestMode = () => {
+    router.replace('/(tabs)/vault');
+  };
+
+  const handleDemoMode = async () => {
+    await enableDemoMode();
     router.replace('/(tabs)/vault');
   };
 
@@ -140,6 +146,15 @@ export default function LoginScreen() {
           <Text style={styles.dividerText}>or</Text>
           <View style={styles.dividerLine} />
         </View>
+
+        {/* Demo mode */}
+        <Pressable onPress={handleDemoMode} style={styles.demoButton}>
+          <Ionicons name="play-circle" size={18} color={Colors.gold} />
+          <Text style={styles.demoText}>Try Demo Mode</Text>
+        </Pressable>
+        <Text style={styles.demoNote}>
+          Explore IdeaVault with sample data — no account or API keys needed.
+        </Text>
 
         {/* Guest mode */}
         <Pressable onPress={handleGuestMode} style={styles.guestButton}>
@@ -262,6 +277,29 @@ const styles = StyleSheet.create({
   dividerText: {
     color: Colors.textMuted,
     fontSize: 13,
+  },
+  demoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: Colors.gold + '15',
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.gold + '30',
+  },
+  demoText: {
+    color: Colors.gold,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  demoNote: {
+    color: Colors.textMuted,
+    fontSize: 11,
+    textAlign: 'center',
+    marginTop: 8,
+    marginBottom: 16,
   },
   guestButton: {
     flexDirection: 'row',

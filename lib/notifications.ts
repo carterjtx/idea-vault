@@ -60,6 +60,14 @@ export async function scheduleWeeklyDigest(totalUnactioned: number, topIdeaTitle
 }
 
 export async function scheduleStreakReminder() {
+  // Cancel existing streak reminders before scheduling a new one
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+  for (const notification of scheduled) {
+    if (notification.content.data?.type === 'streak_reminder') {
+      await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+    }
+  }
+
   await Notifications.scheduleNotificationAsync({
     content: {
       title: 'Keep your streak alive!',

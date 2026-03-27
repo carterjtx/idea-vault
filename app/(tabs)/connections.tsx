@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useIdeas } from '../../hooks/useIdeas';
@@ -18,10 +19,8 @@ export default function ConnectionsScreen() {
   const { activeIdeas, updateIdea } = useIdeas();
   const { linkIdeas, linking } = useAI();
   const [links, setLinks] = useState<IdeaLink[]>([]);
-  const [hasSearched, setHasSearched] = useState(false);
   const router = useRouter();
 
-  // Build link data from existing linked_idea_ids
   const existingLinks = useMemo(() => {
     const linkSet: { from: string; to: string; fromTitle: string; toTitle: string }[] = [];
     const seen = new Set<string>();
@@ -50,6 +49,8 @@ export default function ConnectionsScreen() {
   }, [activeIdeas]);
 
   const handleFindConnections = async () => {
+    if (linking) return; // Prevent double-click
+
     const ideaSummaries = activeIdeas.map((i) => ({
       id: i.id,
       title: i.title,
@@ -58,9 +59,7 @@ export default function ConnectionsScreen() {
 
     const result = await linkIdeas(ideaSummaries);
     setLinks(result);
-    setHasSearched(true);
 
-    // Update ideas with new links
     for (const link of result) {
       const ideaA = activeIdeas.find((i) => i.id === link.idea_a_id);
       const ideaB = activeIdeas.find((i) => i.id === link.idea_b_id);
@@ -78,7 +77,7 @@ export default function ConnectionsScreen() {
     }
   };
 
-  const allDisplayLinks = [
+  const allDisplayLinks = useMemo(() => [
     ...existingLinks.map((l) => ({
       ...l,
       reason: 'Previously linked',
@@ -96,17 +95,15 @@ export default function ConnectionsScreen() {
       .map((l) => ({
         from: l.idea_a_id,
         to: l.idea_b_id,
-        fromTitle:
-          activeIdeas.find((i) => i.id === l.idea_a_id)?.title || 'Unknown',
-        toTitle:
-          activeIdeas.find((i) => i.id === l.idea_b_id)?.title || 'Unknown',
+        fromTitle: activeIdeas.find((i) => i.id === l.idea_a_id)?.title || 'Unknown',
+        toTitle: activeIdeas.find((i) => i.id === l.idea_b_id)?.title || 'Unknown',
         reason: l.reason,
         isExisting: false,
       })),
-  ];
+  ], [existingLinks, links, activeIdeas]);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Connections</Text>
@@ -124,12 +121,12 @@ export default function ConnectionsScreen() {
         >
           {linking ? (
             <>
-              <ActivityIndicator color={Colors.bg} size="small" />
+              <ActivityIndicator color="#fff" size="small" />
               <Text style={styles.aiButtonText}>Finding connections...</Text>
             </>
           ) : (
             <>
-              <Ionicons name="sparkles" size={18} color={Colors.bg} />
+              <Ionicons name="sparkles" size={18} color="#fff" />
               <Text style={styles.aiButtonText}>AI Suggest Links</Text>
             </>
           )}
@@ -150,14 +147,14 @@ export default function ConnectionsScreen() {
       ) : (
         <FlatList
           data={allDisplayLinks}
-          keyExtractor={(item, index) => `${item.from}-${item.to}-${index}`}
+          keyExtractor={(_, index) => `link-${index}`}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => (
             <View style={styles.linkCard}>
               <View style={styles.linkIdeas}>
                 <Pressable
-                  onPress={() => router.push(`/idea/${item.from}`)}
+                  onPress={() => router.push(`/idea/${item.from}` as any)}
                   style={styles.linkIdeaChip}
                 >
                   <Text style={styles.linkIdeaText} numberOfLines={1}>
@@ -172,7 +169,7 @@ export default function ConnectionsScreen() {
                 </View>
 
                 <Pressable
-                  onPress={() => router.push(`/idea/${item.to}`)}
+                  onPress={() => router.push(`/idea/${item.to}` as any)}
                   style={styles.linkIdeaChip}
                 >
                   <Text style={styles.linkIdeaText} numberOfLines={1}>
@@ -192,7 +189,7 @@ export default function ConnectionsScreen() {
           )}
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -203,7 +200,6 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 60,
     paddingBottom: 16,
   },
   headerTitle: {
