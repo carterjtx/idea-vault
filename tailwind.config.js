@@ -29,8 +29,8 @@ module.exports = {
         },
       },
       fontFamily: {
-        heading: ['SpaceMono'],
-        body: ['SpaceMono'],
+        heading: ['System'],
+        body: ['System'],
       },
     },
   },

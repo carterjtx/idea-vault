@@ -7,6 +7,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "scheme": "ideavault",
+    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -14,7 +15,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.ideavault.app"
+      "bundleIdentifier": "com.ideavault.app",
+      "infoPlist": {
+        "UIBackgroundModes": ["fetch", "remote-notification"]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -23,7 +27,12 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "package": "com.ideavault.app"
+      "package": "com.ideavault.app",
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -31,6 +40,15 @@
     },
     "plugins": [
       "expo-router",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0A0E1A",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200
+        }
+      ],
       [
         "expo-notifications",
         {
@@ -50,6 +68,14 @@
           "microphonePermission": "Allow IdeaVault to access your microphone for voice input."
         }
       ]
-    ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      }
+    }
   }
 }

@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -143,7 +144,7 @@ export default function OnboardingScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       {/* Skip button */}
       <Pressable onPress={handleSkip} style={styles.skipButton}>
         <Text style={styles.skipText}>Skip</Text>
@@ -194,7 +195,7 @@ export default function OnboardingScreen() {
           </Pressable>
         )}
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -205,7 +206,7 @@ const styles = StyleSheet.create({
   },
   skipButton: {
     position: 'absolute',
-    top: 60,
+    top: 10,
     right: 20,
     zIndex: 10,
     padding: 8,
